@@ -6,6 +6,28 @@ import string
 BASE_URL = "https://api.mail.tm"
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+
+@app.get("/")
+def read_root():
+    welcome_message = (
+        "Welcome!"
+        "¡Bienvenido!"
+        "欢迎!"
+        "नमस्ते!"
+        "مرحبًا!"
+        "Olá!"
+        "Здравствуйте!"
+        "Bonjour!"
+        "বাংলা!"
+        "こんにちは!"
+    )
+    return {"message": welcome_message}
+
+
 def get_random_email():
     username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
     domain_resp = requests.get(f"{BASE_URL}/domains").json()
