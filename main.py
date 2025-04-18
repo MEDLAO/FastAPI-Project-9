@@ -1,31 +1,11 @@
+from fastapi import FastAPI, HTTPException
 import requests
 import random
 import string
 
+app = FastAPI()
 
 BASE_URL = "https://api.mail.tm"
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
-
-@app.get("/")
-def read_root():
-    welcome_message = (
-        "Welcome!"
-        "¡Bienvenido!"
-        "欢迎!"
-        "नमस्ते!"
-        "مرحبًا!"
-        "Olá!"
-        "Здравствуйте!"
-        "Bonjour!"
-        "বাংলা!"
-        "こんにちは!"
-    )
-    return {"message": welcome_message}
 
 
 def get_random_email():
@@ -36,20 +16,17 @@ def get_random_email():
 
 
 def create_unique_email():
-    for _ in range(5):  # Try up to 5 times
+    for _ in range(5):
         email, password = get_random_email()
         response = requests.post(f"{BASE_URL}/accounts", json={
             "address": email,
             "password": password
         })
         if response.status_code == 201:
-            print(f"✅ Email created: {email}")
             return email, password
         elif response.status_code == 422:
-            print("⚠️ Email already exists, retrying...")
             continue
         else:
-            print("❌ Unexpected error:", response.json())
             break
     return None, None
 
@@ -59,7 +36,9 @@ def get_token(email, password):
         "address": email,
         "password": password
     })
-    return response.json().get("token")
+    if response.status_code == 200:
+        return response.json().get("token")
+    return None
 
 
 def check_inbox(token):
@@ -68,36 +47,40 @@ def check_inbox(token):
     return response.json()
 
 
-# --- Run ---
-# email, password = create_unique_email()
-# if email:
-#     token = get_token(email, password)
-#     print("🔑 Token:", token)
-#
-#     print("📥 Inbox:")
-#     print(check_inbox(token))
+@app.get("/")
+def read_root():
+    welcome_message = (
+        "Welcome! "
+        "¡Bienvenido! "
+        "欢迎! "
+        "नमस्ते! "
+        "مرحبًا! "
+        "Olá! "
+        "Здравствуйте! "
+        "Bonjour! "
+        "বাংলা! "
+        "こんにちは!"
+    )
+    return {"message": welcome_message}
 
-email = "iwiy5trtyd@ptct.net"
-password = "SuperSecure123!"  # Use the correct password!
 
-# Get token
-response = requests.post("https://api.mail.tm/token", json={
-    "address": email,
-    "password": password
-})
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
 
-print("Status Code:", response.status_code)
-print("Response JSON:", response.json())
 
-# Only try to get token if it exists
-if response.status_code == 200 and "token" in response.json():
-    token = response.json()["token"]
-    print("🔑 Token:", token)
+@app.post("/create-temp-email")
+def create_temp_email():
+    email, password = create_unique_email()
+    if not email:
+        raise HTTPException(status_code=500, detail="Failed to create email")
+    return {"email": email, "password": password}
 
-    # Check inbox
-    headers = {"Authorization": f"Bearer {token}"}
-    inbox = requests.get("https://api.mail.tm/messages", headers=headers).json()
-    print("📥 Inbox:")
-    print(inbox)
-else:
-    print("❌ Login failed. Check your email and password.")
+
+@app.post("/get-inbox")
+def get_inbox(email: str, password: str):
+    token = get_token(email, password)
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    inbox = check_inbox(token)
+    return {"inbox": inbox}
