@@ -4,6 +4,7 @@ import random
 import string
 import re
 
+
 app = FastAPI()
 
 BASE_URL = "https://api.mail.tm"
@@ -34,8 +35,8 @@ def read_root():
 # Generate a random email address with a fixed secure password
 def get_random_email():
     username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-    domain_resp = requests.get(f"{BASE_URL}/domains").json()
-    domain = domain_resp["hydra:member"][0]["domain"]
+    domain_resp = requests.get(f"{BASE_URL}/domains").json()  # Fetch available domains
+    domain = domain_resp["hydra:member"][0]["domain"]  # Select the first domain
     return f"{username}@{domain}", "SuperSecure123!"
 
 
@@ -47,11 +48,11 @@ def create_unique_email():
             "address": email,
             "password": password
         })
-        if response.status_code == 201:  # Success
+        if response.status_code == 201:  # Account created successfully
             return email, password
-        elif response.status_code == 422:  # Already exists
+        elif response.status_code == 422:  # Email already in use, try again
             continue
-        else:
+        else:  # Unexpected error
             break
     return None, None
 
@@ -63,13 +64,13 @@ def get_token(email, password):
         "password": password
     })
     if response.status_code == 200:
-        return response.json().get("token")
+        return response.json().get("token")  # Extract token from response
     return None
 
 
 # Retrieve all messages for a given token
 def check_inbox(token):
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"}  # Set auth header
     response = requests.get(f"{BASE_URL}/messages", headers=headers)
     return response.json()
 
@@ -106,18 +107,18 @@ def confirm_latest(email: str, password: str):
     headers = {"Authorization": f"Bearer {token}"}
     message = requests.get(f"{BASE_URL}/messages/{msg_id}", headers=headers).json()
 
-    # Combine plain text and HTML content
+    # Combine plain text and HTML content for parsing
     content = message.get("text", "") + message.get("html", "")
 
-    # Search for the first URL in the message content
+    # Use regex to extract the first URL (confirmation link)
     match = re.search(r'https?://[^\s"\']+', content)
     if not match:
         raise HTTPException(status_code=404, detail="No confirmation link found")
 
     link = match.group(0)
     try:
-        # Attempt to visit the confirmation link
-        confirm_response = requests.get(link, timeout=10)
+        # Attempt to open the extracted confirmation link
+        confirm_response = requests.get(link, timeout=10)  # Timeout prevents hanging
         return {
             "confirmation_link": link,
             "confirmation_status": confirm_response.status_code
