@@ -125,3 +125,20 @@ def confirm_latest(email: str, password: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to visit link: {e}")
+
+
+def authenticate_gmail():
+    creds = None
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    return build('gmail', 'v1', credentials=creds)
