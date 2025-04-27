@@ -7,8 +7,29 @@ import os
 
 app = FastAPI()
 
-
 model = whisper.load_model("base")
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+
+@app.get("/")
+def read_root():
+    welcome_message = (
+        "Welcome!"
+        "¡Bienvenido!"
+        "欢迎!"
+        "नमस्ते!"
+        "مرحبًا!"
+        "Olá!"
+        "Здравствуйте!"
+        "Bonjour!"
+        "বাংলা!"
+        "こんにちは!"
+    )
+    return {"message": welcome_message}
 
 
 @app.post("/transcribe/")
